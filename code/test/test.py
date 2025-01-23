@@ -5,7 +5,7 @@ catalog = S3TableCatalog(
     aws_endpoint=f"https://glue.{region}.amazonaws.com/iceberg",
     region_name=region,
     s3_endpoint=f"https://s3.{region}.amazonaws.com",
-    table_bucket_arn="arn:aws:s3:::iceberg-test-bucket"
+    table_bucket_arn="arn:aws:s3tables:us-east-1:051826712157:bucket/qpj-user"
 )
 
 
