@@ -15,18 +15,19 @@ spark = SparkSession.builder \
             "software.amazon.awssdk:s3tables:2.29.26") \
     .config("spark.sql.catalog.s3tablesbucket", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.s3tablesbucket.catalog-impl", "software.amazon.s3tables.iceberg.S3TablesCatalog") \
-    .config("spark.sql.catalog.s3tablesbucket.warehouse", "arn:aws:s3tables:us-east-2:051826712157:bucket/mytable") \
+    .config("spark.sql.catalog.s3tablesbucket.warehouse", "arn:aws:s3tables:us-west-2:051826712157:bucket/testtable") \
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
     .getOrCreate()
-# 创建命名空间
-spark.sql(" CREATE NAMESPACE IF NOT EXISTS s3tablesbucket.example_namespace")
-# 创建 Iceberg 表
-spark.sql("CREATE TABLE s3tablesbucket.example_namespace.test_spark3 (id INT, data STRING) USING iceberg")
-#
-# 插入数据
-spark.sql("""
-INSERT INTO s3tablesbucket.example_namespace.test_spark3 VALUES (1, 'a'), (2, 'b'), (3, 'c')
-""")
+# # 创建命名空间
+# spark.sql(" CREATE NAMESPACE IF NOT EXISTS s3tablesbucket.example_namespace")
+# # 创建 Iceberg 表
+# spark.sql("CREATE TABLE s3tablesbucket.example_namespace.test_spark3 (id INT, data STRING) USING iceberg")
+# #
+# # 插入数据
+# spark.sql("""
+# INSERT INTO s3tablesbucket.example_namespace.test_spark3 VALUES (1, 'a'), (2, 'b'), (3, 'c')
+# """)
 
 # 查询数据
-spark.sql("""SELECT * FROM s3tablesbucket.example_namespace.test_spark3""").show()
+spark.sql("""SELECT * FROM s3tablesbucket.testdb.test_table""").show()
+#spark.sql("SELECT * FROM base1.create_demo_table1")
