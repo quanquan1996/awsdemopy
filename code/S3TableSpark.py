@@ -31,3 +31,4 @@ spark = SparkSession.builder \
 # 查询数据
 spark.sql("""SELECT * FROM s3tablesbucket.testdb.test_table""").show()
 #spark.sql("SELECT * FROM base1.create_demo_table1")
+spark.sql("""ALTER TABLE s3tablesbucket.testdb.test_table SET IDENTIFIER FIELDS id""")
