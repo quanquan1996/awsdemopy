@@ -74,7 +74,7 @@ def load_and_query_iceberg_table(region, catalog_id, db_name, table_name, query)
     return query_s3_parquet_with_pyarrow(files, query,table_name_with_db)
 
 
-def lambda_handler(event, context):
+def handler(event, context):
     region = event.get("region")
     catalog_id = event.get("catalog_id")
     db_name = event.get("db_name")
@@ -87,39 +87,3 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": results
     }
-
-
-# 示例调用
-region = "us-west-2"
-catalog_id = "051826712157:s3tablescatalog/testtable"
-db_name = "testdb"
-table_name = "commerce_shopping"
-query = """
-SELECT a.item_category AS item_category,
-       b.total_buy,
-       ROUND((b.total_buy / a.total_pv) * 100,2) AS buy_percent_rate
-FROM
-(
-    SELECT item_category,
-           COUNT(*) as total_pv
-    FROM testdb.commerce_shopping
-    WHERE behavior_type = 'pv'
-    GROUP BY item_category
-) a
-INNER JOIN
-(
-    SELECT item_category,
-           COUNT(*) as total_buy
-    FROM testdb.commerce_shopping
-    WHERE behavior_type = 'buy'
-    GROUP BY item_category
-) b
-ON a.item_category = b.item_category
-ORDER BY b.total_buy DESC
-LIMIT 20;
-"""
-
-results = load_and_query_iceberg_table(region, catalog_id, db_name, table_name, query)
-
-for row in results:
-    print(row)

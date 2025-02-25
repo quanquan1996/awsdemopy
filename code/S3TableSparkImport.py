@@ -18,23 +18,18 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.s3tablesbucket.warehouse", "arn:aws:s3tables:us-west-2:051826712157:bucket/testtable") \
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
     .getOrCreate()
-# # 创建命名空间
-# spark.sql(" CREATE NAMESPACE IF NOT EXISTS s3tablesbucket.example_namespace")
-# # 创建 Iceberg 表
-spark.sql("""CREATE TABLE s3tablesbucket.testdb.commerce_shopping (
-    user_id    STRING    COMMENT '用户ID（非真实ID），经抽样&字段脱敏处理后得到',
-    item_id    STRING    COMMENT '商品ID（非真实ID），经抽样&字段脱敏处理后得到',
-    item_category    STRING    COMMENT '商品类别ID（非真实ID），经抽样&字段脱敏处理后得到',
-    behavior_type    STRING    COMMENT '用户对商品的行为类型,包括浏览、收藏、加购物车、购买，pv,fav,cart,buy)',
-    behavior_time    STRING    COMMENT '行为时间,精确到小时级别'
-) USING iceberg""")
-# #
-# # 插入数据
-# spark.sql("""
-# INSERT INTO s3tablesbucket.testdb.test_table(id,data) VALUES (1,'test_connect')
-# """)
+# 读取 CSV 文件
+df = spark.read.option("header", "false").csv("C:/Users/Administrator/Desktop/UserBehavior.csv/UserBehavior.csv")
+df = df.toDF("user_id", "item_id","item_category","behavior_type","behavior_time")
+# 显示 DataFrame 确认数据已读取
+df.show()
 
-# 查询数据
-#spark.sql("""SELECT * FROM s3tablesbucket.testdb.test_table""").show()
-#spark.sql("SELECT * FROM base1.create_demo_table1")
-#spark.sql("""ALTER TABLE s3tablesbucket.testdb.test_table SET IDENTIFIER FIELDS id""")
+# 创建或替换临时视图
+df.createOrReplaceTempView("temp_table")
+
+# 插入数据到 Iceberg 表
+spark.sql("""
+INSERT INTO s3tablesbucket.testdb.commerce_shopping(user_id, item_id,item_category,behavior_type,behavior_time)
+SELECT user_id, item_id,item_category,behavior_type,behavior_time
+FROM temp_table
+""")
