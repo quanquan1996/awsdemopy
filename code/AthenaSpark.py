@@ -34,9 +34,10 @@ def read_s3_path_to_string(s3_path):
 def lambda_handler(event, context):
     # 从event中获取参数
     region_name = event.get('region_name', 'us-west-2')
-    glue_id = event.get('glue.id', '')
+    glue_id = event.get('catalog_id', '')
     query = event.get('code', '')
     sql = event.get('sql', '')
+    work_group = event.get('work_group', 'pyspark')
     if sql != '':
         query = f"""
 df = spark.sql(\"\"\"{sql}\"\"\")
@@ -49,7 +50,7 @@ print(json.dumps(row_dicts))"""
 
     # 步骤 1: 创建 Spark 会话
     response = athena_client.start_session(
-        WorkGroup='pyspark',  # 你创建的 Spark 工作组名称
+        WorkGroup=work_group,  # 你创建的 Spark 工作组名称
         EngineConfiguration={
             'CoordinatorDpuSize': 1,  # 可选，默认为1
             'MaxConcurrentDpus': 20,  # 可选，设置最大并发 DPU

@@ -29,7 +29,7 @@ df.createOrReplaceTempView("temp_table")
 
 # 插入数据到 Iceberg 表
 spark.sql("""
-INSERT INTO s3tablesbucket.testdb.commerce_shopping(user_id, item_id,item_category,behavior_type,behavior_time)
+INSERT INTO s3tablesbucket.testdb.commerce_shopping_big(user_id, item_id,item_category,behavior_type,behavior_time)
 SELECT user_id, item_id,item_category,behavior_type,behavior_time
 FROM temp_table
 """)

@@ -32,7 +32,7 @@ df.createOrReplaceTempView("temp_table")
 
 # 插入数据到 Glue Catalog 表
 spark.sql("""
-INSERT INTO  gluecatalog.gendb.commerce_shopping(user_id, item_id,item_category,behavior_type,behavior_time)
+INSERT INTO  gluecatalog.gendb.commerce_shopping_big(user_id, item_id,item_category,behavior_type,behavior_time)
 SELECT user_id, item_id,item_category,behavior_type,behavior_time
 FROM temp_table
 """)
