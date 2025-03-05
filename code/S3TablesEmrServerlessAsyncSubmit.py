@@ -18,9 +18,7 @@ from pyspark.sql import SparkSession
 spark = SparkSession.builder.appName("running_spark_job").getOrCreate()
 df = spark.sql(\"\"\"{sql}\"\"\")
 rows = df.collect()
-row_dicts = [row.asDict() for row in rows]
-import json
-print(json.dumps(row_dicts))"""
+print(rows)"""
 
     # 创建 EMR Serverless 客户端
     emr_serverless = boto3.client('emr-serverless', region_name=region_name)
