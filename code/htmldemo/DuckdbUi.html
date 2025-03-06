@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Lambda Query Interface</title>
+    <style>
+        :root {
+            --aws-orange: #FF9900;
+            --aws-blue: #232F3E;
+            --aws-light-blue: #1A73E8;
+            --aws-gray: #EAEDED;
+            --aws-dark-gray: #545B64;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Amazon Ember', Arial, sans-serif;
+        }
+
+        body {
+            background-color: #F8F9FA;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .nav-button {
+            display: block;
+            background-color: var(--aws-blue);
+            color: white;
+            text-align: center;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .nav-button:hover {
+            background-color: var(--aws-light-blue);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--aws-gray);
+        }
+
+        .logo {
+            height: 40px;
+            margin-right: 15px;
+        }
+
+        .title {
+            font-size: 24px;
+            color: var(--aws-blue);
+            font-weight: 500;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--aws-blue);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--aws-orange);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: var(--aws-orange);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #EC7211;
+        }
+
+        .response-container {
+            background-color: var(--aws-blue);
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow-x: auto;
+            display: none;
+        }
+
+        .response-title {
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: var(--aws-orange);
+        }
+
+        .execution-time {
+            margin-top: 10px;
+            font-weight: 500;
+            color: var(--aws-orange);
+        }
+
+        pre {
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--aws-dark-gray);
+            font-size: 14px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 153, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--aws-orange);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Navigation button to s3tableathena.html -->
+    <a href="s3tableathena.html" class="nav-button">Switch to Athena Query Interface</a>
+    <a href="emrS3table.html" class="nav-button">Switch to Emr Serverless Interface</a>
+    <!--<a href="s3tableduckdb.html" class="nav-button">Switch to Duckdb Query Interface</a>-->
+    <div class="header">
+        <img src="https://d1.awsstatic.com/logos/aws-logo-lockups/poweredbyaws/PB_AWS_logo_RGB_stacked_REV_SQ.91cd4af40773cbfbd15577a3c2b8a346fe3e8fa2.png" alt="AWS Logo" class="logo">
+        <h1 class="title">AWS S3 Tables Query Interface(Duckdb)</h1>
+    </div>
+
+    <div class="card">
+        <form id="queryForm">
+            <div class="form-group">
+                <label for="region">Region</label>
+                <select id="region" name="region" required>
+                    <option value="us-east-1">US East (N. Virginia)</option>
+                    <option value="us-east-2">US East (Ohio)</option>
+                    <option value="us-west-1">US West (N. California)</option>
+                    <option value="us-west-2" selected>US West (Oregon)</option>
+                    <option value="af-south-1">Africa (Cape Town)</option>
+                    <option value="ap-east-1">Asia Pacific (Hong Kong)</option>
+                    <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                    <option value="ap-northeast-3">Asia Pacific (Osaka)</option>
+                    <option value="ap-northeast-2">Asia Pacific (Seoul)</option>
+                    <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                    <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                    <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                    <option value="ca-central-1">Canada (Central)</option>
+                    <option value="eu-central-1">Europe (Frankfurt)</option>
+                    <option value="eu-west-1">Europe (Ireland)</option>
+                    <option value="eu-west-2">Europe (London)</option>
+                    <option value="eu-south-1">Europe (Milan)</option>
+                    <option value="eu-west-3">Europe (Paris)</option>
+                    <option value="eu-north-1">Europe (Stockholm)</option>
+                    <option value="me-south-1">Middle East (Bahrain)</option>
+                    <option value="sa-east-1">South America (São Paulo)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="catalog_id">Catalog ID</label>
+                <input type="text" id="catalog_id" name="catalog_id" placeholder="e.g. 051826712157:s3tablescatalog/testtable" value="051826712157:s3tablescatalog/testtable" required>
+            </div>
+
+            <div class="form-group">
+                <label for="db_name">Database Name</label>
+                <input type="text" id="db_name" name="db_name" placeholder="e.g. testdb" value="testdb" required>
+            </div>
+
+            <div class="form-group">
+                <label for="table_name">Table Name</label>
+                <input type="text" id="table_name" name="table_name" placeholder="e.g. test_table" value="test_table" required>
+            </div>
+
+            <div class="form-group">
+                <label for="query">SQL Query</label>
+                <textarea id="query" name="query" placeholder="Enter your SQL query here..." required>SELECT * FROM testdb.test_table</textarea>
+            </div>
+
+            <button type="submit" id="submitBtn">Execute Query</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Processing your query...</p>
+        </div>
+
+        <div class="response-container" id="responseContainer">
+            <h3 class="response-title">Response:</h3>
+            <pre id="responseOutput"></pre>
+            <div class="execution-time" id="executionTime"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2023 AWS Lambda Query Interface | Powered by Amazon Web Services</p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('queryForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const loading = document.getElementById('loading');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseOutput = document.getElementById('responseOutput');
+        const executionTimeElement = document.getElementById('executionTime');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Show loading, hide previous response
+        loading.style.display = 'block';
+        responseContainer.style.display = 'none';
+        submitBtn.disabled = true;
+
+        // Prepare request data
+        const requestData = {
+            region: document.getElementById('region').value,
+            catalog_id: document.getElementById('catalog_id').value,
+            db_name: document.getElementById('db_name').value,
+            table_name: document.getElementById('table_name').value,
+            query: document.getElementById('query').value
+        };
+
+        // Record start time
+        const startTime = new Date();
+
+        // Make API request
+        fetch('https://xxxxxx/pro/duckdb', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Calculate execution time
+                const endTime = new Date();
+                const executionTime = (endTime - startTime) / 1000; // Convert to seconds
+
+                // Display response
+                responseOutput.textContent = JSON.stringify(data, null, 2);
+                executionTimeElement.textContent = `Execution Time: ${executionTime.toFixed(2)} seconds`;
+                responseContainer.style.display = 'block';
+            })
+            .catch(error => {
+                // Calculate execution time even for errors
+                const endTime = new Date();
+                const executionTime = (endTime - startTime) / 1000; // Convert to seconds
+
+                responseOutput.textContent = 'Error: ' + error.message;
+                executionTimeElement.textContent = `Execution Time: ${executionTime.toFixed(2)} seconds`;
+                responseContainer.style.display = 'block';
+            })
+            .finally(() => {
+                // Hide loading, enable button
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+            });
+    });
+</script>
+</body>
+</html>
