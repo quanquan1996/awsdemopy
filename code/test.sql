@@ -7,6 +7,11 @@ behavior_type    STRING    COMMENT '用户对商品的行为类型,包括浏览�
 behavior_time    STRING    COMMENT '行为时间,精确到小时级别' ) USING iceberg
 
 -- 用户行为漏斗分析
+-- view_rate: 浏览率 (有浏览行为的用户/总用户)
+-- view_to_favorite_rate: 浏览到收藏转化率 (有收藏行为的用户/有浏览行为的用户)
+-- favorite_to_cart_rate: 收藏到加购转化率 (有加购行为的用户/有收藏行为的用户)
+-- cart_to_purchase_rate: 加购到购买转化率 (有购买行为的用户/有加购行为的用户)
+-- overall_conversion_rate: 总体转化率 (有购买行为的用户/总用户)
 WITH user_behavior_counts AS (
     SELECT
         user_id,
@@ -39,7 +44,7 @@ SELECT
     ROUND(100.0 * users_with_purchases / total_users, 2) AS overall_conversion_rate
 FROM funnel_stages;
 
--- 商品关联推荐
+-- 商品关联推荐  查询实现了一个商品关联分析（关联规则挖掘），用于发现哪些商品经常被一起购买。
 WITH user_purchases AS (
     SELECT
         user_id,

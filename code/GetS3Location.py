@@ -46,7 +46,7 @@ def query_s3_parquet_with_pyarrow(s3_uris, sql_query,table_name_with_db):
         return result
     else:
         return None
-def load_and_query_iceberg_table(region, catalog_id, db_name, table_name, query):
+def load_and_query_iceberg_table(region, catalog_id, db_name, table_name):
     """
     加载Iceberg表并执行查询。
 
@@ -71,7 +71,9 @@ def load_and_query_iceberg_table(region, catalog_id, db_name, table_name, query)
     table_name_with_db = f"{db_name}.{table_name}"
     table = catalog.load_table(table_name_with_db)
     files = [task.file.file_path for task in table.scan().plan_files()]
-    return query_s3_parquet_with_pyarrow(files, query,table_name_with_db)
+    # 逐行打印
+    for file in files:
+        print(file)
 
 
 def lambda_handler(event, context):
@@ -94,32 +96,7 @@ region = "us-west-2"
 catalog_id = "051826712157:s3tablescatalog/testtable"
 db_name = "testdb"
 table_name = "commerce_shopping_big"
-query = """
-SELECT a.item_category AS item_category,
-       b.total_buy,
-       ROUND((b.total_buy / a.total_pv) * 100,2) AS buy_percent_rate
-FROM
-(
-    SELECT item_category,
-           COUNT(*) as total_pv
-    FROM testdb.commerce_shopping
-    WHERE behavior_type = 'pv'
-    GROUP BY item_category
-) a
-INNER JOIN
-(
-    SELECT item_category,
-           COUNT(*) as total_buy
-    FROM testdb.commerce_shopping
-    WHERE behavior_type = 'buy'
-    GROUP BY item_category
-) b
-ON a.item_category = b.item_category
-ORDER BY b.total_buy DESC
-LIMIT 20;
-"""
 
-results = load_and_query_iceberg_table(region, catalog_id, db_name, table_name, query)
 
-for row in results:
-    print(row)
+load_and_query_iceberg_table(region, catalog_id, db_name, table_name)
+

@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/awsdemopy.iml" filepath="$PROJECT_DIR$/.idea/awsdemopy.iml" />
       <module fileurl="file://$PROJECT_DIR$/code/code.iml" filepath="$PROJECT_DIR$/code/code.iml" />
+      <module fileurl="file://$PROJECT_DIR$/code/demohtml/demohtml.iml" filepath="$PROJECT_DIR$/code/demohtml/demohtml.iml" />
     </modules>
   </component>
 </project>
