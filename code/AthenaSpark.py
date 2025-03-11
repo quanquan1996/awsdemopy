@@ -42,9 +42,7 @@ def lambda_handler(event, context):
         query = f"""
 df = spark.sql(\"\"\"{sql}\"\"\")
 rows = df.collect()
-row_dicts = [row.asDict() for row in rows]
-import json
-print(json.dumps(row_dicts))"""
+print(rows)"""
     # 创建 Athena 客户端
     athena_client = boto3.client('athena', region_name=region_name)
 
@@ -103,8 +101,8 @@ print(json.dumps(row_dicts))"""
             calculation_state = response['Status']['State']
             print(f"Calculation state: {calculation_state}")
             if calculation_state in ['FAILED', 'CANCELLED']:
-                print(f"Calculation failed: {response['Status']['StateChangeReason']}")
-                return {"error": f"Calculation failed: {response['Status']['StateChangeReason']}"}
+                print(f"Calculation failed: {response}")
+                return {"error": f"Calculation failed: {response}"}
             if calculation_state != 'COMPLETED':
                 time.sleep(2)  # 等待2秒再检查
 

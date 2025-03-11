@@ -20,17 +20,15 @@ spark = SparkSession.builder \
     .getOrCreate()
 # # 创建命名空间
 # spark.sql(" CREATE NAMESPACE IF NOT EXISTS s3tablesbucket.example_namespace")
-# # 创建 Iceberg 表
-# spark.sql("""CREATE TABLE s3tablesbucket.testdb.commerce_shopping_big (
-#     user_id    STRING    COMMENT '用户ID（非真实ID），经抽样&字段脱敏处理后得到',
-#     item_id    STRING    COMMENT '商品ID（非真实ID），经抽样&字段脱敏处理后得到',
-#     item_category    STRING    COMMENT '商品类别ID（非真实ID），经抽样&字段脱敏处理后得到',
-#     behavior_type    STRING    COMMENT '用户对商品的行为类型,包括浏览、收藏、加购物车、购买，pv,fav,cart,buy)',
-#     behavior_time    STRING    COMMENT '行为时间,精确到小时级别'
-# ) USING iceberg""")
-spark.sql("""SELECT * 
-FROM s3tablesbucket.testdb.test_table
-TIMESTAMP AS OF CURRENT_TIMESTAMP() - INTERVAL 10 MINUTES;""").show()
+# 创建 Iceberg 表
+spark.sql("""CREATE TABLE s3tablesbucket.testdb.commerce_shopping_test1 (
+    user_id    STRING    COMMENT '用户ID（非真实ID），经抽样&字段脱敏处理后得到',
+    item_id    STRING    COMMENT '商品ID（非真实ID），经抽样&字段脱敏处理后得到',
+    item_category    STRING    COMMENT '商品类别ID（非真实ID），经抽样&字段脱敏处理后得到',
+    behavior_type    STRING    COMMENT '用户对商品的行为类型,包括浏览、收藏、加购物车、购买，pv,fav,cart,buy)',
+    behavior_time    STRING    COMMENT '行为时间,精确到小时级别'
+) USING iceberg""")
+#
 # #
 # # 插入数据
 # spark.sql("""
