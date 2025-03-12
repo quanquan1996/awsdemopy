@@ -1,3 +1,4 @@
+-- 数据来源：某电商网站用户行为数据，已脱敏
 -- ddl
 CREATE TABLE s3tablesbucket.testdb.commerce_shopping_big (
 user_id    STRING    COMMENT '用户ID（非真实ID），经抽样&字段脱敏处理后得到',
@@ -7,11 +8,16 @@ behavior_type    STRING    COMMENT '用户对商品的行为类型,包括浏览�
 behavior_time    STRING    COMMENT '行为时间,精确到小时级别' ) USING iceberg
 
 -- 用户行为漏斗分析
--- view_rate: 浏览率 (有浏览行为的用户/总用户)
--- view_to_favorite_rate: 浏览到收藏转化率 (有收藏行为的用户/有浏览行为的用户)
--- favorite_to_cart_rate: 收藏到加购转化率 (有加购行为的用户/有收藏行为的用户)
--- cart_to_purchase_rate: 加购到购买转化率 (有购买行为的用户/有加购行为的用户)
--- overall_conversion_rate: 总体转化率 (有购买行为的用户/总用户)
+-- 总用户数(total_users)
+-- 浏览过商品的用户数(users_with_views)
+-- 收藏过商品的用户数(users_with_favorites)
+-- 加入购物车的用户数(users_with_cart_adds)
+-- 完成购买的用户数(users_with_purchases)
+-- 浏览率(view_rate)：浏览用户占总用户百分比
+-- 浏览到收藏转化率(view_to_favorite_rate)
+-- 收藏到加购转化率(favorite_to_cart_rate)
+-- 加购到购买转化率(cart_to_purchase_rate)
+-- 整体转化率(overall_conversion_rate)：购买用户占总用户百分比
 WITH user_behavior_counts AS (
     SELECT
         user_id,
@@ -45,6 +51,12 @@ SELECT
 FROM funnel_stages;
 
 -- 商品关联推荐  查询实现了一个商品关联分析（关联规则挖掘），用于发现哪些商品经常被一起购买。
+--商品对(item_a和item_b)
+--商品对共同购买频次(pair_frequency)
+--各自的购买频次(freq_a和freq_b)
+--从item_a到item_b的置信度
+--从item_b到item_a的置信度
+--商品对的Jaccard相似度
 WITH user_purchases AS (
     SELECT
         user_id,
@@ -104,6 +116,9 @@ ORDER BY jaccard_similarity DESC
     LIMIT 20;
 
 -- 商品类别交叉购买分析
+-- 成对出现的商品类别(category_a和category_b)
+-- 同时购买这两个类别商品的用户数量(common_users)
+-- 同时购买两个类别的用户占category_a用户总数的百分比(percentage_of_category_a_users)
 WITH user_category_purchases AS (
     SELECT
         user_id,
@@ -127,6 +142,9 @@ ORDER BY common_users DESC
     LIMIT 20;
 
 -- 商品类别购买转换率
+-- 商品类别(item_category)
+-- 该类别的购买总次数(total_buy)
+-- 购买率(buy_percent_rate)：购买次数占浏览次数的百分比
 SELECT a.item_category AS item_category,
        b.total_buy,
        ROUND((b.total_buy / a.total_pv) * 100,2) AS buy_percent_rate

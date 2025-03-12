@@ -39,3 +39,4 @@ AWS Lake Formation上配置对于的表和库权限
 - 加入firehose.amazonaws.com作为允许委托人
 - 创建firehose流(参考教程 https://aws.amazon.com/jp/blogs/news/replicate-changes-from-databases-to-apache-iceberg-tables-using-amazon-data-firehose/)
 - 测试数据流式入湖
+- 按唯一键更新数据需要设置#spark.sql("""ALTER TABLE s3tablesbucket.testdb.test_table SET IDENTIFIER FIELDS id""")
