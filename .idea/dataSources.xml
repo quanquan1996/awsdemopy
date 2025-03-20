@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="Athena" uuid="b08f82f0-24e7-45eb-8c4f-aeb96cb11fdf">
+      <driver-ref>athena</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.simba.athena.jdbc42.Driver</jdbc-driver>
+      <jdbc-url>jdbc:awsathena://AwsRegion=us-west-2;S3OutputLocation=s3://qpj-athena-west2/</jdbc-url>
+      <jdbc-additional-properties>
+        <property name="com.intellij.clouds.kubernetes.db.enabled" value="false" />
+      </jdbc-additional-properties>
+      <working-dir>$ProjectFileDir$</working-dir>
+      <driver-properties>
+        <property name="Workgroup" value="primary" />
+        <property name="S3OutputLocation" value="s3://qpj-athena-west2/" />
+      </driver-properties>
+    </data-source>
+  </component>
+</project>
