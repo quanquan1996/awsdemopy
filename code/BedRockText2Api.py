@@ -1,6 +1,5 @@
 import boto3
 import json
-import time
 
 # Initialize Bedrock client
 bedrock_runtime = boto3.client(
@@ -11,16 +10,20 @@ bedrock_runtime = boto3.client(
 # Define multiple tools
 tools = [
     {
-        "name": "executeSqlQuery",
-        "description": "Execute data queries to retrieve user shopping behavior data. please give english input .Field descriptions: user_id STRING COMMENT 'User ID (not real ID), obtained after sampling & field desensitization', item_id STRING COMMENT 'Product ID (not real ID), obtained after sampling & field desensitization', item_category STRING COMMENT 'Product category ID (not real ID), obtained after sampling & field desensitization', behavior_type STRING COMMENT 'User behavior types for products, including view, favorite, add to cart, purchase, value range: pv,fav,cart,buy)', behavior_time STRING COMMENT 'Behavior time, eg:1511544070'",
+        "name": "QueryUserShoppingBehaviorData",
+        "description": "Execute data queries to retrieve user shopping behavior data.\nPlease give English input.\n\n**Field descriptions:**\n\n* **user_id (STRING):** A unique identifier assigned to each user after sampling and field desensitization. This is not the user's real ID.\n* **item_id (STRING):** A unique identifier assigned to each product after sampling and field desensitization. This is not the product's real ID.\n* **item_category (STRING):** The identifier for the product category, obtained after sampling and field desensitization. This is not the real category ID.\n* **behavior_type (STRING):** The type of user interaction with a product. Possible values are:\n\t* `pv`: View\n\t* `fav`: Favorite\n\t* `cart`: Add to cart\n\t* `buy`: Purchase\n* **behavior_time (STRING):** The timestamp of the user's behavior, represented as a Unix timestamp (e.g., 1511544070).",
         "input_schema": {
             "type": "object",
             "properties": {
+                "query_description": {
+                    "type": "string",
+                    "description": "Query description ,Query What And Why,How to use these data"
+                },
                 "main_query": {
                     "type": "object",
                     "description": "Main query definition",
                     "properties": {
-                        "select_fields": {
+                        "query_fields": {
                             "type": "array",
                             "description": "List of fields to query",
                             "items": {
@@ -45,12 +48,12 @@ tools = [
                                 "required": ["field"]
                             }
                         },
-                        "from_table": {
+                        "from_data_api": {
                             "type": "string",
                             "enum": ["testdb.commerce_shopping"],
                             "description": "Table name to query"
                         },
-                        "where_conditions": {
+                        "data_filter_conditions": {
                             "type": "array",
                             "description": "Query conditions",
                             "items": {
@@ -215,32 +218,54 @@ tools = [
                             }
                         }
                     },
-                    "required": ["select_fields", "from_table"]
+                    "required": ["query_fields", "from_data_api"]
                 }
             },
             "required": ["main_query"]
         }
     }
 
-
 ]
-def query_db_by_invoke_lambda(sql):
+# to english and use claude get
+messagesToUseTool = """
+你是一个跨境电商领域的数据洞察专家,你接受数据需求并理解,你需要思考需要哪些数据，为什么
+你需要从已有的tooluse里面使用合适的tool一轮或者多轮地多角度的去拿到相关数据，从而方便进行数据分析洞察
+如果目前的工具里面的数据口径无法支撑这个需求，请不要勉强回答，直接返回缺少哪些数据和建议
+数据需求为:##USER_INPUT
+"""
+messageFormatTable = """
+帮我把上下文中所有工具历史查询的数据以表格的形式输出，并在表格前附带数据解释，对于每个工具查询结果，先简短描述数据内容，然后用表格展示
+不需要过多的解释和分析
+"""
+messageGetSignal = """
+你是一个跨境电商领域的数据洞察专家,你根据接收到的需求，根据已有数据来进行分析
+给出专业的见解和建议
+此外如果有什么有价值的探索，请给出探索的建议
+如果当前对话里面的数据不完美或者无法支撑需求，请额外给出建议
+回复的思路为 1.数据见解  2.探索建议 3.数据建议
+****目前的数据为:##DATA_INPUT
+****目前的需求为：##USER_INPUT
+"""
+
+
+# Mock tool execution function
+
+# Function to handle conversation with Claude, including multiple tool calls
+def execute_tool(tool_name, tool_params):
     # 创建 Lambda 客户端
     lambda_client = boto3.client('lambda', region_name='us-west-2')
 
     # 构建请求事件
     event = {
-        "region_name": "us-west-2",
-        "catalog_id": "051826712157:s3tablescatalog/testtable",
-        "work_group": "pyspark",
-        "sql": sql
+        "tool_name": tool_name,
+        "tool_params": tool_params
     }
 
     # 将事件转换为JSON字符串
     payload = json.dumps(event)
 
     # 替换为您的Lambda函数名称
-    function_name = "AthenaSparkCalculation"
+    function_name = "EcommerceDataApi"
 
     # 调用Lambda函数
     response = lambda_client.invoke(
@@ -252,224 +277,51 @@ def query_db_by_invoke_lambda(sql):
     # 处理响应
     response_payload = response['Payload'].read().decode('utf-8')
     result = json.loads(response_payload)
-    return result
+    print(result)
+    sql = result["sql"]
+    sql_result = result["sql_result"]
+    return sql_result, sql
 
-def json_to_sql(json_input):
-    """
-    将JSON格式的查询定义转换为标准SQL语句
 
-    Args:
-        json_input (dict): 符合schema的JSON对象
-
-    Returns:
-        str: 生成的SQL查询语句
-    """
-    try:
-        # 提取主查询部分
-        main_query = json_input.get('main_query', {})
-        if not main_query:
-            return "ERROR: Missing main_query in input"
-
-        # 处理SELECT部分
-        select_fields = main_query.get('select_fields', [])
-        if not select_fields:
-            return "ERROR: No select fields specified"
-
-        select_clause = []
-        for field in select_fields:
-            field_name = field.get('field')
-            alias = field.get('alias', '')
-            aggregate = field.get('aggregate', 'NONE')
-
-            if aggregate and aggregate != 'NONE':
-                formatted_field = f"{aggregate}({field_name})"
-            else:
-                formatted_field = field_name
-
-            if alias:
-                formatted_field += f" AS {alias}"
-
-            select_clause.append(formatted_field)
-
-        # 处理FROM部分
-        from_table = main_query.get('from_table', '')
-        if not from_table:
-            return "ERROR: No from_table specified"
-
-        # 处理JOIN部分
-        joins = main_query.get('joins', [])
-        join_clause = []
-        for join in joins:
-            join_type = join.get('type', 'INNER')
-            join_table = join.get('table', '')
-            join_alias = join.get('alias', '')
-            on_conditions = join.get('on_conditions', [])
-
-            if not join_table or not on_conditions:
-                continue
-
-            join_str = f"{join_type} JOIN {join_table}"
-            if join_alias:
-                join_str += f" AS {join_alias}"
-
-            join_str += " ON "
-            on_parts = []
-
-            for i, condition in enumerate(on_conditions):
-                left = condition.get('left_field', '')
-                op = condition.get('operator', '=')
-                right = condition.get('right_field', '')
-                logic = condition.get('logic', 'AND')
-
-                if not left or not right:
-                    continue
-
-                condition_str = f"{left} {op} {right}"
-
-                if i > 0:
-                    condition_str = f"{logic} {condition_str}"
-
-                on_parts.append(condition_str)
-
-            join_str += " ".join(on_parts)
-            join_clause.append(join_str)
-
-        # 处理WHERE部分
-        where_conditions = main_query.get('where_conditions', [])
-        where_clause = []
-
-        for i, condition in enumerate(where_conditions):
-            field = condition.get('field', '')
-            op = condition.get('operator', '=')
-            value = condition.get('value')
-            logic = condition.get('logic', 'AND')
-
-            if not field or op is None:
-                continue
-
-            # 处理不同类型的操作符
-            if op in ('IS NULL', 'IS NOT NULL'):
-                condition_str = f"{field} {op}"
-            elif op in ('IN', 'NOT IN'):
-                if isinstance(value, list):
-                    formatted_values = ", ".join([f"'{v}'" if isinstance(v, str) else str(v) for v in value])
-                    condition_str = f"{field} {op} ({formatted_values})"
-                else:
-                    condition_str = f"{field} {op} ({value})"
-            else:
-                if isinstance(value, str):
-                    condition_str = f"{field} {op} '{value}'"
-                elif value is None:
-                    condition_str = f"{field} IS NULL" if op == '=' else f"{field} IS NOT NULL"
-                else:
-                    condition_str = f"{field} {op} {value}"
-
-            if i > 0:
-                condition_str = f"{logic} {condition_str}"
-
-            where_clause.append(condition_str)
-
-        # 处理GROUP BY部分
-        group_by = main_query.get('group_by', [])
-        group_clause = ", ".join(group_by) if group_by else ""
-
-        # 处理HAVING部分
-        having_conditions = main_query.get('having_conditions', [])
-        having_clause = []
-
-        for i, condition in enumerate(having_conditions):
-            field = condition.get('field', '')
-            aggregate = condition.get('aggregate', '')
-            op = condition.get('operator', '=')
-            value = condition.get('value')
-            logic = condition.get('logic', 'AND')
-
-            if not field or not op:
-                continue
-
-            if aggregate and aggregate != 'NONE':
-                field_str = f"{aggregate}({field})"
-            else:
-                field_str = field
-
-            if isinstance(value, str):
-                condition_str = f"{field_str} {op} '{value}'"
-            elif value is None:
-                condition_str = f"{field_str} IS NULL" if op == '=' else f"{field_str} IS NOT NULL"
-            else:
-                condition_str = f"{field_str} {op} {value}"
-
-            if i > 0:
-                condition_str = f"{logic} {condition_str}"
-
-            having_clause.append(condition_str)
-
-        # 处理ORDER BY部分
-        order_by = main_query.get('order_by', [])
-        order_clause = []
-
-        for order in order_by:
-            field = order.get('field', '')
-            direction = order.get('direction', 'ASC')
-
-            if field:
-                order_clause.append(f"{field} {direction}")
-
-        # 处理LIMIT和OFFSET
-        limit = main_query.get('limit')
-        offset = main_query.get('offset')
-
-        # 构建SQL查询
-        sql = f"SELECT {', '.join(select_clause)}\nFROM {from_table}"
-
-        if join_clause:
-            sql += f"\n{' '.join(join_clause)}"
-
-        if where_clause:
-            sql += f"\nWHERE {' '.join(where_clause)}"
-
-        if group_clause:
-            sql += f"\nGROUP BY {group_clause}"
-
-        if having_clause:
-            sql += f"\nHAVING {' '.join(having_clause)}"
-
-        if order_clause:
-            sql += f"\nORDER BY {', '.join(order_clause)}"
-
-        if limit is not None:
-            sql += f"\nLIMIT {limit}"
-
-        if offset is not None:
-            sql += f"\nOFFSET {offset}"
-
-        return sql
-
-    except Exception as e:
-        return f"ERROR: Failed to generate SQL - {str(e)}"
-# Mock tool execution function
-def execute_tool(tool_name, tool_params):
-    if tool_name == "executeSqlQuery":
-        sql =  json_to_sql(tool_params)
-        sql_result = query_db_by_invoke_lambda(sql)
-        result = f"query with sql:{sql},and result is:{sql_result}"
-        return result
-
-# Function to handle conversation with Claude, including multiple tool calls
-def chat_with_claude(user_input, model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0"):
+def chat(data_input, user_input, model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0"):
     messages = [
         {
             "role": "user",
-            "content": user_input
+            "content": messageGetSignal.replace("##USER_INPUT", user_input).replace("##DATA_INPUT", data_input)
         }
     ]
+    request_payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 102400,
+        "messages": messages
+    }
 
+    # Invoke the model
+    response = bedrock_runtime.invoke_model(
+        modelId=model_id,
+        body=json.dumps(request_payload)
+    )
+
+    # Parse the response
+    response_body = json.loads(response.get("body").read())
+    return response_body["content"][0]["text"]
+
+
+def get_data_use_tool(user_input, model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0"):
+    messages = [
+        {
+            "role": "user",
+            "content": messagesToUseTool.replace("##USER_INPUT", user_input)
+        }
+    ]
+    data_source = []
+    max_loop = 0
     # Continue conversation until no more tool calls are needed
     while True:
         # Create the request payload
         request_payload = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
+            "max_tokens": 102400,
             "messages": messages,
             "tools": tools
         }
@@ -512,7 +364,9 @@ def chat_with_claude(user_input, model_id="us.anthropic.claude-3-7-sonnet-202502
                     print(f"Executing tool: {tool_name} with input: {tool_input}")
 
                     # Execute the tool
-                    tool_result = execute_tool(tool_name, tool_input)
+                    tool_result, sql = execute_tool(tool_name, tool_input)
+                    data_source.append(
+                        f"data source:{tool_name}\n,data search method:sql,\ndata search method payload:{sql}\n")
                     print(f"Tool result: {tool_result}")
                     # Format the tool result
                     tool_results.append({
@@ -526,19 +380,69 @@ def chat_with_claude(user_input, model_id="us.anthropic.claude-3-7-sonnet-202502
                     "role": "user",
                     "content": tool_results
                 })
-
+                max_loop = max_loop + 1
+                if max_loop >= 2:
+                    # 输出数据表格
+                    messages.append({
+                        "role": "user",
+                        "content": messageFormatTable
+                    })
+                    request_payload = {
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 102400,
+                        "messages": messages,
+                        "tools": tools
+                    }
+                    response = bedrock_runtime.invoke_model(
+                        modelId=model_id,
+                        body=json.dumps(request_payload)
+                    )
+                    response_body = json.loads(response.get("body").read())
+                    return response_body["content"][0]["text"], data_source
                 # Continue the loop to see if more tool calls are needed
             else:
                 print("Tool use indicated but no tool_use content found")
-                return response_body
+                break
         else:
             # No more tool calls, return the final response
-            return response_body
+            return response_body["content"][0]["text"], data_source
+
+
+def lambda_handler(event, context):
+    user_input = event.get("user_input")
+    model_id = event.get("model_id", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
+    data_input,data_source = get_data_use_tool(user_input, model_id)
+    print("\nFinal response for query 1:" + data_input)
+    result = chat(data_input, user_input, model_id)
+    print("\nFinal response for query 2:" + result)
+    resultLog = {
+        "statusCode": 200,
+        "result": result,
+        "data": data_input,
+        "data_source": data_source
+    }
+    invocation_id = event.get('invocation_id')
+    write_result(resultLog, invocation_id)
+    return resultLog
+
+
+def write_result(result, invocation_id):
+    s3_client = boto3.client('s3')
+    s3_key = f'lambda-status/{invocation_id}.json'
+    s3_client.put_object(
+        Bucket='lambda-result-qpj-west-2',
+        Key=s3_key,
+        Body=json.dumps(result)
+    )
+
 
 # Example usage
 if __name__ == "__main__":
-    # Example 1: Single tool use
-    query1 = "帮我看看点击购买转换率"
-    result1 = chat_with_claude(query1)
-    print("\nFinal response for query 1:")
-    print(json.dumps(result1, indent=2))
+    # Example 1:
+    query = "帮我看看点击购买转换率"
+    # getdata
+    result1, data_source = get_data_use_tool(query,'us.anthropic.claude-3-5-haiku-20241022-v1:0')
+    print("\nFinal response for query 1:" + result1)
+    print("\ndatasource response for query 1:" + json.dumps(data_source))
+    result2 = chat(result1, query,"us.anthropic.claude-3-5-haiku-20241022-v1:0")
+    print("\nFinal response for query 2:" + result2)
