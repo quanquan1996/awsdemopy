@@ -259,7 +259,6 @@ def generate_tools_json_from_config(config: Config) -> Dict[str, Any]:
 tools = [generate_tools_json_from_config(config) for config in configs]
 # 根据tools得到schema map（function_name->input_schema）
 schema_map = {tool["name"]: tool["input_schema"] for tool in tools}
-print(tools[1])
 def text2json(prompt):
     while True:
         messages = [
