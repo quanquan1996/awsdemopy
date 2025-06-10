@@ -449,6 +449,7 @@ def json2sql(json_input):
     except Exception as e:
         return f"ERROR: Failed to generate SQL - {str(e)}"
 
+## 如果不用duckdb，这一方法注释掉
 def query_sql(sql):
     return DuckDbS3table.handler({"sql": sql}, None)
 
@@ -460,4 +461,5 @@ print(jsonArr)
 for json_input in jsonArr:
     sql = json2sql(json_input)
     print(sql)
+    ## 如果不用duckdb，这一步注释掉
     print(query_sql(sql))
