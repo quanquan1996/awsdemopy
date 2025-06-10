@@ -19,8 +19,8 @@ spark = SparkSession.builder \
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
     .getOrCreate()
 # 读取 CSV 文件
-df = spark.read.option("header", "false").csv("C:/Users/Administrator/Desktop/UserBehavior.csv/UserBehavior.csv")
-df = df.toDF("user_id", "item_id","item_category","behavior_type","behavior_time")
+df = spark.read.option("header", "false").csv("C:/Users/Administrator/Desktop/data/invoice.csv")
+df = df.toDF("invoice_number", "invoice_date", "amount", "voucher_number", "customer_code")
 # 显示 DataFrame 确认数据已读取
 df.show()
 
@@ -29,7 +29,7 @@ df.createOrReplaceTempView("temp_table")
 
 # 插入数据到 Iceberg 表
 spark.sql("""
-INSERT INTO s3tablesbucket.testdb.commerce_shopping_test1(user_id, item_id,item_category,behavior_type,behavior_time)
-SELECT user_id, item_id,item_category,behavior_type,behavior_time
+INSERT INTO s3tablesbucket.testdb.invoices(invoice_number , invoice_date ,amount ,voucher_number ,customer_code )
+SELECT invoice_number , invoice_date ,amount ,voucher_number ,customer_code
 FROM temp_table
 """)

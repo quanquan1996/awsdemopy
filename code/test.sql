@@ -25,7 +25,7 @@ WITH user_behavior_counts AS (
         SUM(CASE WHEN behavior_type = 'fav' THEN 1 ELSE 0 END) AS favorite_count,
         SUM(CASE WHEN behavior_type = 'cart' THEN 1 ELSE 0 END) AS cart_count,
         SUM(CASE WHEN behavior_type = 'buy' THEN 1 ELSE 0 END) AS purchase_count
-    FROM testdb.commerce_shopping
+    FROM testtable.testdb.commerce_shopping
     GROUP BY user_id
 ),
 funnel_stages AS (
@@ -61,7 +61,7 @@ WITH user_purchases AS (
     SELECT
         user_id,
         item_id
-    FROM testdb.commerce_shopping
+    FROM testtable.testdb.commerce_shopping
     WHERE behavior_type = 'buy'
     GROUP BY user_id, item_id
 ),
@@ -123,7 +123,7 @@ WITH user_category_purchases AS (
     SELECT
         user_id,
         item_category
-    FROM testdb.commerce_shopping
+    FROM testtable.testdb.commerce_shopping
     WHERE behavior_type = 'buy'
     GROUP BY user_id, item_category
 )
@@ -152,7 +152,7 @@ FROM
     (
         SELECT item_category,
                COUNT(*) as total_pv
-        FROM testdb.commerce_shopping
+        FROM testtable.testdb.commerce_shopping
         WHERE behavior_type = 'pv'
         GROUP BY item_category
     ) a
@@ -160,7 +160,7 @@ FROM
     (
         SELECT item_category,
                COUNT(*) as total_buy
-        FROM testdb.commerce_shopping
+        FROM testtable.testdb.commerce_shopping
         WHERE behavior_type = 'buy'
         GROUP BY item_category
     ) b
