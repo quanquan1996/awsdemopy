@@ -1,9 +1,10 @@
+# pip install boto3,jsonschema
 from dataclasses import dataclass
 from typing import List, Dict, Any
 import boto3
 import json
 from jsonschema import validate, ValidationError
-
+## 如果不用duckdb，这一步注释掉
 import DuckDbS3table
 
 
